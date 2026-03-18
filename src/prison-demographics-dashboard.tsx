@@ -684,7 +684,7 @@ const Dashboard = () => {
               ))}
             </select>
 
-            <div className="flex gap-2 mb-4">
+            <div className="flex gap-2 mb-2 flex-wrap">
               <label className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 cursor-pointer text-sm">
                 Import CSV for this Chart
                 <input type="file" accept=".csv" className="hidden" onChange={(e) => {
@@ -717,7 +717,7 @@ const Dashboard = () => {
                   }
                 }} />
               </label>
-              
+
               <button onClick={() => {
                 const chart = currentData.charts[selectedChart];
                 const csvContent = [
@@ -735,6 +735,41 @@ const Dashboard = () => {
                 URL.revokeObjectURL(url);
               }} className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm">
                 Export CSV for this Chart
+              </button>
+
+              <label className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 cursor-pointer text-sm">
+                Import JSON for this Chart
+                <input type="file" accept=".json" className="hidden" onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      try {
+                        const parsed = JSON.parse(event.target.result);
+                        updateChart(selectedChart, parsed);
+                        alert('JSON imported successfully!');
+                      } catch (err) {
+                        alert('Invalid JSON file');
+                      }
+                    };
+                    reader.readAsText(file);
+                  }
+                }} />
+              </label>
+
+              <button onClick={() => {
+                const chart = currentData.charts[selectedChart];
+                const blob = new Blob([JSON.stringify(chart, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${chart.title.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+              }} className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm">
+                Export JSON for this Chart
               </button>
             </div>
 
@@ -793,6 +828,43 @@ const Dashboard = () => {
                 <option key={idx} value={idx}>{chart.title}</option>
               ))}
             </select>
+
+            <div className="flex gap-2 mb-4 flex-wrap">
+              <label className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 cursor-pointer text-sm">
+                Import JSON for this Chart
+                <input type="file" accept=".json" className="hidden" onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      try {
+                        const parsed = JSON.parse(event.target.result);
+                        updateChart(selectedChart, parsed);
+                        alert('JSON imported successfully!');
+                      } catch (err) {
+                        alert('Invalid JSON file');
+                      }
+                    };
+                    reader.readAsText(file);
+                  }
+                }} />
+              </label>
+
+              <button onClick={() => {
+                const chart = currentData.charts[selectedChart];
+                const blob = new Blob([JSON.stringify(chart, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${chart.title.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+              }} className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm">
+                Export JSON for this Chart
+              </button>
+            </div>
 
             <label className="block text-sm font-medium mb-2">Chart Data (JSON)</label>
             <textarea value={JSON.stringify(currentData.charts[selectedChart], null, 2)} onChange={(e) => {
