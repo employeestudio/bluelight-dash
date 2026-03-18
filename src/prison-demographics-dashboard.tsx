@@ -1,10 +1,32 @@
 import React, { useState } from 'react';
 
 const LineChart = ({ config, customWidth, customPadding }) => {
-  const chartHeight = 200;
   const chartWidth = customWidth || 385;
   const defaultPadding = { top: 40, right: 150, bottom: 45, left: 50 };
-  const padding = customPadding || defaultPadding;
+  const basePadding = customPadding || defaultPadding;
+
+  // wrap subtitle into lines
+  const subtitleLines: string[] = [];
+  if (config.showSubtitle && config.subtitleText) {
+    const availableWidth = chartWidth - basePadding.left - basePadding.right;
+    const charWidth = 4.2;
+    const words = config.subtitleText.split(' ');
+    let current: string[] = [];
+    words.forEach(word => {
+      const test = [...current, word].join(' ');
+      if (test.length * charWidth < availableWidth || current.length === 0) {
+        current.push(word);
+      } else {
+        if (subtitleLines.length < 1) { subtitleLines.push(current.join(' ')); current = [word]; }
+        else current.push(word);
+      }
+    });
+    if (current.length > 0) subtitleLines.push(current.join(' '));
+  }
+
+  const extraSubtitleHeight = (subtitleLines.length > 0 ? 8 : 0) + (subtitleLines.length > 1 ? 10 : 0);
+  const padding = { ...basePadding, top: basePadding.top + extraSubtitleHeight };
+  const chartHeight = 200 + extraSubtitleHeight;
   const innerWidth = chartWidth - padding.left - padding.right;
   const innerHeight = chartHeight - padding.top - padding.bottom;
 
@@ -25,6 +47,12 @@ const LineChart = ({ config, customWidth, customPadding }) => {
         <text x={padding.left} y={25} textAnchor="start" fontSize="12" fontWeight="600" fill="#333">
           {config.title}
         </text>
+
+        {subtitleLines.map((line, i) => (
+          <text key={i} x={padding.left} y={38 + i * 10} textAnchor="start" fontSize="8" fill="#666" fontStyle="italic">
+            {line}
+          </text>
+        ))}
 
         {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
           const val = Math.round(yMax * ratio);
@@ -945,6 +973,30 @@ const Dashboard = () => {
               }} className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm">
                 Export JSON for this Chart
               </button>
+            </div>
+
+            <div className="mb-4 p-3 bg-gray-50 rounded border">
+              <label className="flex items-center gap-2 text-sm mb-2">
+                <input type="checkbox" checked={currentData.charts[selectedChart]?.showSubtitle || false} onChange={(e) => {
+                  const newCharts = [...currentData.charts];
+                  newCharts[selectedChart] = { ...newCharts[selectedChart], showSubtitle: e.target.checked };
+                  setConfig({...config, [activeVersion]: {...currentData, charts: newCharts}});
+                }} className="w-4 h-4" />
+                <span className="font-medium">Show subtitle</span>
+              </label>
+              {currentData.charts[selectedChart]?.showSubtitle && (
+                <input
+                  type="text"
+                  value={currentData.charts[selectedChart]?.subtitleText || ''}
+                  onChange={(e) => {
+                    const newCharts = [...currentData.charts];
+                    newCharts[selectedChart] = { ...newCharts[selectedChart], subtitleText: e.target.value };
+                    setConfig({...config, [activeVersion]: {...currentData, charts: newCharts}});
+                  }}
+                  placeholder="Subtitle text..."
+                  className="w-full px-3 py-2 border rounded text-sm"
+                />
+              )}
             </div>
 
             <label className="block text-sm font-medium mb-2">Chart Data (JSON)</label>
