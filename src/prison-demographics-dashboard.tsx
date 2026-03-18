@@ -109,14 +109,95 @@ const LineChart = ({ config, customWidth, customPadding }) => {
   );
 };
 
+const HorizontalDemographicChart = ({ config, customWidth, facilityLegendLabel }) => {
+  const chartWidth = customWidth || 385;
+  const leftMargin = 8;
+  const labelWidth = 105;
+  const rightPadding = 72;
+  const barAreaWidth = chartWidth - leftMargin - labelWidth - rightPadding;
+  const barHeight = 7;
+  const rowHeight = 26;
+  const maxPercentage = config.maxPercentage || 100;
+  const categories = config.categories || [];
+
+  // wrap title across up to 2 lines
+  const titleWords = config.title.split(' ');
+  const titleLines: string[] = [];
+  let currentTitleLine: string[] = [];
+  titleWords.forEach(word => {
+    const test = [...currentTitleLine, word].join(' ');
+    if (test.length * 6.5 < chartWidth - leftMargin * 2 || currentTitleLine.length === 0) {
+      currentTitleLine.push(word);
+    } else {
+      titleLines.push(currentTitleLine.join(' '));
+      currentTitleLine = [word];
+    }
+  });
+  if (currentTitleLine.length > 0) titleLines.push(currentTitleLine.join(' '));
+
+  const subtitleOffset = config.showSubtitle && config.subtitleText ? 12 : 0;
+  const topPadding = 20 + titleLines.length * 14 + subtitleOffset + 6; // title + optional subtitle
+  const chartHeight = topPadding + categories.length * rowHeight + 8;
+
+  return (
+    <div className="bg-white" style={{ borderRadius: '4px', border: '1px solid #E1EAEB' }}>
+      <svg width={chartWidth} height={chartHeight} style={{ fontFamily: 'Work Sans, sans-serif' }}>
+        {titleLines.map((line, i) => (
+          <text key={i} x={leftMargin} y={16 + i * 14} fontSize="12" fontWeight="600" fill="#333">{line}</text>
+        ))}
+
+        {config.showSubtitle && config.subtitleText && (
+          <text x={leftMargin} y={16 + titleLines.length * 14} fontSize="8" fill="#666" fontStyle="italic">
+            {config.subtitleText}{config.includeFacilityInSubtitle ? ` at ${facilityLegendLabel}` : ''}
+          </text>
+        )}
+
+        {/* Grid lines */}
+        {[0, 25, 50, 75, 100].map(pct => {
+          if (pct > maxPercentage) return null;
+          const x = leftMargin + labelWidth + (pct / maxPercentage) * barAreaWidth;
+          return (
+            <line key={pct} x1={x} y1={topPadding - 4} x2={x} y2={topPadding + categories.length * rowHeight} stroke="#E5E5E5" strokeWidth="1" />
+          );
+        })}
+
+        {categories.map((cat, idx) => {
+          const y = topPadding + idx * rowHeight;
+          const swWidth = Math.max(0, (cat.systemwidePercent / maxPercentage) * barAreaWidth);
+          const facWidth = Math.max(0, (cat.facilityPercent / maxPercentage) * barAreaWidth);
+          const barX = leftMargin + labelWidth;
+
+          return (
+            <g key={idx}>
+              <text x={leftMargin + labelWidth - 4} y={y + barHeight * 2 + 1} textAnchor="end" fontSize="8" fontWeight="600" fill="#333">{cat.label}</text>
+
+              <rect x={barX} y={y} width={swWidth} height={barHeight} fill="#B8D4E0" stroke="#46676F" strokeWidth="0.5" />
+              <text x={barX + swWidth + 3} y={y + barHeight - 1} fontSize="7.5" fontWeight="600" fill="#4C5E61">{cat.systemwidePercent}% ({cat.systemwideCount})</text>
+
+              <rect x={barX} y={y + barHeight} width={facWidth} height={barHeight} fill="#0077B0" />
+              <text x={barX + facWidth + 3} y={y + barHeight * 2 + 1} fontSize="7.5" fontWeight="600" fill="#152237">{cat.facilityPercent}% ({cat.facilityCount})</text>
+            </g>
+          );
+        })}
+
+        <line x1={leftMargin + labelWidth} y1={topPadding - 4} x2={leftMargin + labelWidth} y2={topPadding + categories.length * rowHeight} stroke="#999" strokeWidth="1" />
+      </svg>
+    </div>
+  );
+};
+
 const DemographicChart = ({ config, customWidth, facilityLegendLabel }) => {
+  const categories = config.categories || [];
+  if (categories.length > 10) {
+    return <HorizontalDemographicChart config={config} customWidth={customWidth} facilityLegendLabel={facilityLegendLabel} />;
+  }
+
   const chartHeight = 200;
   const chartWidth = customWidth || 385;
   const padding = { top: 40, right: 15, bottom: 45, left: 35 };
   const innerWidth = chartWidth - padding.left - padding.right;
   const innerHeight = chartHeight - padding.top - padding.bottom;
 
-  const categories = config.categories || [];
   const categoryWidth = categories.length > 0 ? innerWidth / categories.length : 0;
   const maxPercentage = config.maxPercentage || 100;
 
@@ -945,14 +1026,25 @@ const Dashboard = () => {
                     <DemographicChart key={idx} config={chart} facilityLegendLabel={currentData.facilityLegendLabel} />
                   ))}
                 </div>
-                <div className="flex gap-3">
-                  <div style={{ width: '40%' }}>
-                    <DemographicChart config={currentData.charts[6]} customWidth={305} facilityLegendLabel={currentData.facilityLegendLabel} />
+                {(currentData.charts[7]?.categories?.length ?? 0) > 10 ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <DemographicChart config={currentData.charts[6]} facilityLegendLabel={currentData.facilityLegendLabel} />
+                    </div>
+                    <div>
+                      <DemographicChart config={currentData.charts[7]} customWidth={770} facilityLegendLabel={currentData.facilityLegendLabel} />
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex gap-3">
+                    <div style={{ width: '40%' }}>
+                      <DemographicChart config={currentData.charts[6]} customWidth={305} facilityLegendLabel={currentData.facilityLegendLabel} />
+                    </div>
+                    <div style={{ width: '60%' }}>
+                      <DemographicChart config={currentData.charts[7]} customWidth={465} facilityLegendLabel={currentData.facilityLegendLabel} />
+                    </div>
                   </div>
-                  <div style={{ width: '60%' }}>
-                    <DemographicChart config={currentData.charts[7]} customWidth={465} facilityLegendLabel={currentData.facilityLegendLabel} />
-                  </div>
-                </div>
+                )}
               </div>
             ) : (
               <div className="space-y-3">
@@ -971,14 +1063,25 @@ const Dashboard = () => {
                     <DemographicChart key={idx + 5} config={chart} facilityLegendLabel={currentData.facilityLegendLabel} />
                   ))}
                 </div>
-                <div className="flex gap-3">
-                  <div style={{ width: '40%' }}>
-                    <DemographicChart config={currentData.charts[7]} customWidth={305} facilityLegendLabel={currentData.facilityLegendLabel} />
+                {(currentData.charts[8]?.categories?.length ?? 0) > 10 ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <DemographicChart config={currentData.charts[7]} facilityLegendLabel={currentData.facilityLegendLabel} />
+                    </div>
+                    <div>
+                      <DemographicChart config={currentData.charts[8]} customWidth={770} facilityLegendLabel={currentData.systemwideLegendLabel} />
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex gap-3">
+                    <div style={{ width: '40%' }}>
+                      <DemographicChart config={currentData.charts[7]} customWidth={305} facilityLegendLabel={currentData.facilityLegendLabel} />
+                    </div>
+                    <div style={{ width: '60%' }}>
+                      <DemographicChart config={currentData.charts[8]} customWidth={465} facilityLegendLabel={currentData.systemwideLegendLabel} />
+                    </div>
                   </div>
-                  <div style={{ width: '60%' }}>
-                    <DemographicChart config={currentData.charts[8]} customWidth={465} facilityLegendLabel={currentData.systemwideLegendLabel} />
-                  </div>
-                </div>
+                )}
               </div>
             )}
           </>
